@@ -71,6 +71,10 @@ def collect_human_trajectory(
     if print_info and lang is not None:
         print(colored(f"Instruction: {lang}", "green"))
 
+    # print the style and layout ids
+    print(colored(f"Style ID: {ep_meta['style_id']}", "blue"))
+    print(colored(f"Layout ID: {ep_meta['layout_id']}", "blue"))
+
     # degugging: code block here to quickly test and close env
     # env.close()
     # return None, True
@@ -178,6 +182,10 @@ def collect_human_trajectory(
         # with open("/home/soroushn/tmp/model.xml", "w") as f:
         #     f.write(env.model.get_xml())
         # exit()
+
+        # Print robot qpos for each robot
+        for i, robot in enumerate(env.robots):
+            print(f"Robot {i} qpos:", robot._joint_positions)
 
     if nonzero_ac_seen and hasattr(env, "ep_directory"):
         ep_directory = env.ep_directory
