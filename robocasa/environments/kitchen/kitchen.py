@@ -19,6 +19,7 @@ from robosuite.environments.base import EnvMeta
 from scipy.spatial.transform import Rotation
 
 from robosuite.models.robots import PandaOmron
+from robosuite_models.robots.compositional import UR5eOmron, Kinova3Omron, SawyerOmron
 
 import robocasa
 import robocasa.macros as macros
@@ -339,6 +340,7 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
         super()._load_model()
 
         for robot in self.robots:
+            # breakpoint()
             if isinstance(robot.robot_model, PandaOmron):
                 robot.init_qpos = (
                     -0.01612974,
@@ -348,6 +350,38 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
                     0.03932365,
                     1.51639493,
                     0.69615947,
+                )
+                robot.init_torso_qpos = np.array([0.0])
+            elif isinstance(robot.robot_model, UR5eOmron):
+                robot.init_qpos = (
+                    -0.58569818,
+                    -2.18731418,
+                    1.56418283,
+                    -1.16756367,
+                    -1.39645665,
+                    -2.19034441,
+                )
+                robot.init_torso_qpos = np.array([0.0])
+            elif isinstance(robot.robot_model, Kinova3Omron):
+                robot.init_qpos = (
+                    -0.01644879,
+                    -0.21821127,
+                    -0.03672257,
+                    1.44824387,
+                    0.00474319,
+                    1.57378763,
+                    -1.61663958,
+                )
+                robot.init_torso_qpos = np.array([0.0])
+            elif isinstance(robot.robot_model, SawyerOmron):
+                robot.init_qpos = (
+                    -0.03233244,
+                    -1.95566034,
+                    -0.3867259,
+                    1.69880802,
+                    -0.14735544,
+                    1.83948537,
+                    -1.78524019,
                 )
                 robot.init_torso_qpos = np.array([0.0])
 
