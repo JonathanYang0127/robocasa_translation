@@ -243,6 +243,7 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
         use_distractors=False,
         translucent_robot=False,
         randomize_cameras=False,
+        rng=None,
     ):
         self.init_robot_base_pos = init_robot_base_pos
 
@@ -305,33 +306,63 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
                     "body_part_ordering"
                 ] = ["right", "right_gripper", "base", "torso"]
 
-        super().__init__(
-            robots=robots,
-            env_configuration=env_configuration,
-            controller_configs=controller_configs,
-            base_types=base_types,
-            gripper_types=gripper_types,
-            initialization_noise=initialization_noise,
-            use_camera_obs=use_camera_obs,
-            has_renderer=has_renderer,
-            has_offscreen_renderer=has_offscreen_renderer,
-            render_camera=render_camera,
-            render_collision_mesh=render_collision_mesh,
-            render_visual_mesh=render_visual_mesh,
-            render_gpu_device_id=render_gpu_device_id,
-            control_freq=control_freq,
-            lite_physics=True,
-            horizon=horizon,
-            ignore_done=ignore_done,
-            hard_reset=hard_reset,
-            camera_names=camera_names,
-            camera_heights=camera_heights,
-            camera_widths=camera_widths,
-            camera_depths=camera_depths,
-            renderer=renderer,
-            renderer_config=renderer_config,
-            seed=seed,
-        )
+        try:
+            super().__init__(
+                robots=robots,
+                env_configuration=env_configuration,
+                controller_configs=controller_configs,
+                base_types=base_types,
+                gripper_types=gripper_types,
+                initialization_noise=initialization_noise,
+                use_camera_obs=use_camera_obs,
+                has_renderer=has_renderer,
+                has_offscreen_renderer=has_offscreen_renderer,
+                render_camera=render_camera,
+                render_collision_mesh=render_collision_mesh,
+                render_visual_mesh=render_visual_mesh,
+                render_gpu_device_id=render_gpu_device_id,
+                control_freq=control_freq,
+                lite_physics=True,
+                horizon=horizon,
+                ignore_done=ignore_done,
+                hard_reset=hard_reset,
+                camera_names=camera_names,
+                camera_heights=camera_heights,
+                camera_widths=camera_widths,
+                camera_depths=camera_depths,
+                renderer=renderer,
+                renderer_config=renderer_config,
+                seed=seed,
+                rng=rng,
+            )
+        except TypeError as e:
+            super().__init__(
+                robots=robots,
+                env_configuration=env_configuration,
+                controller_configs=controller_configs,
+                base_types=base_types,
+                gripper_types=gripper_types,
+                initialization_noise=initialization_noise,
+                use_camera_obs=use_camera_obs,
+                has_renderer=has_renderer,
+                has_offscreen_renderer=has_offscreen_renderer,
+                render_camera=render_camera,
+                render_collision_mesh=render_collision_mesh,
+                render_visual_mesh=render_visual_mesh,
+                render_gpu_device_id=render_gpu_device_id,
+                control_freq=control_freq,
+                lite_physics=True,
+                horizon=horizon,
+                ignore_done=ignore_done,
+                hard_reset=hard_reset,
+                camera_names=camera_names,
+                camera_heights=camera_heights,
+                camera_widths=camera_widths,
+                camera_depths=camera_depths,
+                renderer=renderer,
+                renderer_config=renderer_config,
+                seed=seed,
+            )
 
     def _load_model(self):
         """
@@ -340,7 +371,6 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
         super()._load_model()
 
         for robot in self.robots:
-            # breakpoint()
             if isinstance(robot.robot_model, PandaOmron):
                 robot.init_qpos = (
                     -0.01612974,

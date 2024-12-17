@@ -30,6 +30,10 @@ import robocasa.macros as macros
 from robocasa.models.fixtures import FixtureType
 from robocasa.utils.robomimic.robomimic_dataset_utils import convert_to_robomimic_format
 
+MAX_SEED = 1_000_000_000
+SEEDS = np.arange(MAX_SEED)
+np.random.shuffle(SEEDS)
+SEED_IDX = 0
 
 def is_empty_input_spacemouse(action_dict):
     if (
@@ -50,6 +54,7 @@ def collect_human_trajectory(
     render=True,
     max_fr=None,
     print_info=True,
+    prev_traj_discarded=False,
 ):
     """
     Use the device (keyboard or SpaceNav 3D mouse) to collect a demonstration.
@@ -62,7 +67,6 @@ def collect_human_trajectory(
         arms (str): which arm to control (eg bimanual) 'right' or 'left'
         env_configuration (str): specified environment configuration
     """
-
     env.reset()
 
     ep_meta = env.get_ep_meta()
@@ -110,6 +114,23 @@ def collect_human_trajectory(
 
     discard_traj = False
 
+    # Store the initial layout information
+    if hasattr(env, 'env'):  # Handle wrapped environments
+        base_env = env.env
+    else:
+        base_env = env
+    
+    current_layout_id = base_env._layout_id if hasattr(base_env, '_layout_id') else None
+    current_style_id = base_env._style_id if hasattr(base_env, '_style_id') else None
+
+    env.hard_reset = False
+
+    # Store the initial RNG state and layout/style IDs before any resets
+    if hasattr(base_env, 'env'):
+        # Only store RNG state if this is our first run (not after a discard)
+        if not prev_traj_discarded:
+            initial_rng_state = base_env.env.rng.bit_generator.state
+    
     # Loop until we get a reset from the input or the task completes
     while True:
         start = time.time()
@@ -184,8 +205,11 @@ def collect_human_trajectory(
         # exit()
 
         # Print robot qpos for each robot
-        for i, robot in enumerate(env.robots):
-            print(f"Robot {i} qpos:", robot._joint_positions)
+        # for i, robot in enumerate(env.robots):
+        #     print(f"Robot {i} qpos:", robot._joint_positions)
+
+        print(len(env_action))
+        print("env_action", env_action)
 
     if nonzero_ac_seen and hasattr(env, "ep_directory"):
         ep_directory = env.ep_directory
@@ -468,6 +492,7 @@ if __name__ == "__main__":
         use_camera_obs=False,
         control_freq=20,
         renderer=args.renderer,
+        rng=np.random.default_rng(SEEDS[SEED_IDX]),
     )
 
     # Wrap this with visualization wrapper
@@ -512,9 +537,10 @@ if __name__ == "__main__":
 
     excluded_eps = []
 
+    prev_traj_discarded = False
+
     # collect demonstrations
-    while True:
-        print()
+    while True:    
         ep_directory, discard_traj = collect_human_trajectory(
             env,
             device,
@@ -523,9 +549,14 @@ if __name__ == "__main__":
             mirror_actions,
             render=(args.renderer != "mjviewer"),
             max_fr=args.max_fr,
+            prev_traj_discarded=prev_traj_discarded,
         )
 
+        if not discard_traj:
+            SEED_IDX += 1
+
         print("Keep traj?", not discard_traj)
+        prev_traj_discarded = discard_traj
 
         if not args.debug:
             if discard_traj and ep_directory is not None:
@@ -534,3 +565,24 @@ if __name__ == "__main__":
                 tmp_directory, new_dir, env_info, excluded_episodes=excluded_eps
             )
             convert_to_robomimic_format(hdf5_path)
+
+        # env.rng = np.random.default_rng(SEEDS[SEED_IDX])
+        # Create environment
+        env = robosuite.make(
+            **config,
+            has_renderer=True,
+            has_offscreen_renderer=False,
+            render_camera=args.camera,
+            ignore_done=True,
+            use_camera_obs=False,
+            control_freq=20,
+            renderer=args.renderer,
+            rng=np.random.default_rng(SEEDS[SEED_IDX]),
+        )
+
+        # Wrap this with visualization wrapper
+        env = VisualizationWrapper(env)
+
+        # Add the data collection wrapper if not in debug mode
+        if not args.debug:
+            env = DataCollectionWrapper(env, tmp_directory)
