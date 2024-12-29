@@ -540,6 +540,7 @@ if __name__ == "__main__":
     prev_traj_discarded = False
 
     # collect demonstrations
+    started = False
     while True:    
         ep_directory, discard_traj = collect_human_trajectory(
             env,
@@ -554,6 +555,7 @@ if __name__ == "__main__":
 
         if not discard_traj:
             SEED_IDX += 1
+            started=True
 
         print("Keep traj?", not discard_traj)
         prev_traj_discarded = discard_traj
@@ -564,25 +566,30 @@ if __name__ == "__main__":
             hdf5_path = gather_demonstrations_as_hdf5(
                 tmp_directory, new_dir, env_info, excluded_episodes=excluded_eps
             )
-            convert_to_robomimic_format(hdf5_path)
+            if started:
+                convert_to_robomimic_format(hdf5_path)
 
-        # env.rng = np.random.default_rng(SEEDS[SEED_IDX])
-        # Create environment
-        env = robosuite.make(
-            **config,
-            has_renderer=True,
-            has_offscreen_renderer=False,
-            render_camera=args.camera,
-            ignore_done=True,
-            use_camera_obs=False,
-            control_freq=20,
-            renderer=args.renderer,
-            rng=np.random.default_rng(SEEDS[SEED_IDX]),
-        )
+        # # Properly clean up the old environment
+        # if hasattr(env, 'close'):
+        #     env.close()
+        # del env
 
-        # Wrap this with visualization wrapper
-        env = VisualizationWrapper(env)
+        # # Create new environment
+        # env = robosuite.make(
+        #     **config,
+        #     has_renderer=True,
+        #     has_offscreen_renderer=False,
+        #     render_camera=args.camera,
+        #     ignore_done=True,
+        #     use_camera_obs=False,
+        #     control_freq=20,
+        #     renderer=args.renderer,
+        #     rng=np.random.default_rng(SEEDS[SEED_IDX]),
+        # )
+
+        # # Wrap this with visualization wrapper
+        # env = VisualizationWrapper(env)
 
         # Add the data collection wrapper if not in debug mode
-        if not args.debug:
-            env = DataCollectionWrapper(env, tmp_directory)
+        # if not args.debug:
+        #     env = DataCollectionWrapper(env, tmp_directory)

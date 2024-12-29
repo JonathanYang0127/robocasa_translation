@@ -17,6 +17,9 @@ import torch
 import robocasa.utils.robomimic.robomimic_tensor_utils as TensorUtils
 import robocasa.utils.robomimic.robomimic_env_utils as EnvUtils
 import robocasa.utils.robomimic.robomimic_dataset_utils as DatasetUtils
+from robosuite.utils.camera_utils import get_camera_transform_matrix, project_points_from_world_to_camera
+from notebooks.utils import get_aabbs_for_body, get_corners, extra_image_transform_robocasa
+from functools import partial
 
 # from robomimic.utils.log_utils import log_warning
 
@@ -28,6 +31,8 @@ def extract_trajectory(
     actions,
     done_mode,
     add_datagen_info=False,
+    add_aux_info=True,
+    process_num=0,
 ):
     """
     Helper function to extract observations, rewards, and dones along a trajectory using
@@ -64,6 +69,33 @@ def extract_trajectory(
         initial_state_dict=initial_state,
         datagen_info=[],
     )
+
+    if add_aux_info:
+        traj['eef_2d_trace'] = []
+        traj['obj_main_bbox'] = []
+        traj['low_level_motion'] = []
+
+
+    # TODO: add aux info here
+    world_to_camera_transform = get_camera_transform_matrix(
+        env.env.sim,
+        "robot0_agentview_center",
+        env.env.camera_heights[0],
+        env.env.camera_widths[0],
+    )
+
+    project_to_camera_space = partial(
+        project_points_from_world_to_camera, 
+        world_to_camera_transform=world_to_camera_transform,
+        camera_height=env.env.camera_heights[0],
+        camera_width=env.env.camera_widths[0]
+    )
+
+    extra_transform = partial(
+        extra_image_transform_robocasa,
+        image_size=env.env.camera_widths[0],
+    )
+
     traj_len = states.shape[0]
     # iteration variable @t is over "next obs" indices
     for t in range(traj_len):
@@ -98,13 +130,31 @@ def extract_trajectory(
         traj["rewards"].append(r)
         traj["dones"].append(done)
         traj["datagen_info"].append(datagen_info)
-        # traj["actions_abs"].append(action_abs)
+
+        if add_aux_info:
+            traj['eef_2d_trace'].append(extra_transform(project_to_camera_space(obs['robot0_eef_pos'])))
+            bbox_coords = get_aabbs_for_body(env.env, 'obj_main')['obj_main']
+            corners = get_corners(bbox_coords[None])[0] # 8, 3
+            bbox_2d_corners = project_to_camera_space(corners) # 8, 2
+            bbox_2d = np.zeros(4,)
+            bbox_2d[:2] = extra_transform(np.min(bbox_2d_corners, axis=0))
+            bbox_2d[2:] = extra_transform(np.max(bbox_2d_corners, axis=0))
+            traj['obj_main_bbox'].append(bbox_2d)
 
     # convert list of dict to dict of list for obs dictionaries (for convenient writes to hdf5 dataset)
     traj["obs"] = TensorUtils.list_of_flat_dict_to_dict_of_list(traj["obs"])
     traj["datagen_info"] = TensorUtils.list_of_flat_dict_to_dict_of_list(
         traj["datagen_info"]
     )
+
+    if add_aux_info:
+        # TODO: add aux info here
+        # if process_num == 0:  # Only debug first process
+        #     from remote_pdb import set_trace
+        #     set_trace(port=4444)  # You can choose any available port
+        traj['eef_2d_trace'] = np.stack(traj['eef_2d_trace'])
+        traj['obj_main_bbox'] = np.stack(traj['obj_main_bbox'])
+        
 
     # list to numpy array
     for k in traj:
@@ -152,6 +202,7 @@ def write_traj_to_file(
                     # ep_data_grp.create_dataset(
                     #     "actions_abs", data=np.array(traj["actions_abs"])
                     # )
+                    
                     for k in traj["obs"]:
                         if args.no_compress:
                             ep_data_grp.create_dataset(
@@ -176,12 +227,57 @@ def write_traj_to_file(
                                     compression="gzip",
                                 )
 
-                    if "datagen_info" in traj:
-                        for k in traj["datagen_info"]:
-                            ep_data_grp.create_dataset(
-                                "datagen_info/{}".format(k),
-                                data=np.array(traj["datagen_info"][k]),
-                            )
+                    # if "datagen_info" in traj:
+                    #     print('✅' + str(traj["datagen_info"].keys()))
+                    #     for k in traj["datagen_info"]:
+                    #         print(k)
+                    #         ep_data_grp.create_dataset(
+                    #             "datagen_info/{}".format(k),
+                    #             data=np.array(traj["datagen_info"][k]),
+                    #         )
+                    
+                    # copy datagen dict (if applicable)
+                    # if process_num == 0:  # Only debug first process
+                    #     from remote_pdb import set_trace
+                    #     set_trace(port=4444)  # You can choose any available port
+                    if "data/{}/datagen_info".format(ep) in f:
+                        datagen_dict = f["data/{}/datagen_info".format(ep)]
+                        print(f"Process {process_num}: Datagen dict keys: {list(datagen_dict.keys())}")
+                        for k in datagen_dict:
+                            k_str = str(k) if not isinstance(k, (str, bytes)) else k
+                            print(f"Process {process_num}: Key {k} -> {k_str}, Type: {type(k)}")
+                            try:
+                                # Check if it's a group or dataset
+                                if isinstance(datagen_dict[k], h5py.Group):
+                                    print(f"Process {process_num}: {k} is a group")
+                                    # Create a group in the output file
+                                    group = ep_data_grp.create_group(f"datagen_info/{k_str}")
+                                    # Copy all datasets from this group
+                                    for subk in datagen_dict[k]:
+                                        data = datagen_dict[k][subk][()]
+                                        group.create_dataset(subk, data=np.array(data))
+                                else:
+                                    data = datagen_dict[k][()]
+                                    print(f"Process {process_num}: Data type: {type(data)}")
+                                    ep_data_grp.create_dataset(
+                                        "datagen_info/{}".format(k_str),
+                                        data=np.array(data),
+                                    )
+                            except Exception as e:
+                                print(f"Process {process_num}: Error with key {k}: {str(e)}")
+                                raise e
+
+                    # copy aux info
+                    if 'eef_2d_trace' in traj:
+                        ep_data_grp.create_dataset(
+                            'eef_2d_trace',
+                            data=np.array(traj['eef_2d_trace'])
+                        )
+                    if 'obj_main_bbox' in traj:
+                        ep_data_grp.create_dataset(
+                            'obj_main_bbox',
+                            data=np.array(traj['obj_main_bbox'])
+                        )
 
                     # copy action dict (if applicable)
                     if "data/{}/action_dict".format(ep) in f:
@@ -339,7 +435,7 @@ def extract_multiple_trajectories_with_error(
 ):
     # create environment to use for data processing
 
-    if args.add_datagen_info:
+    if False and args.add_datagen_info:
         import mimicgen.utils.file_utils as MG_FileUtils
 
         env_meta = MG_FileUtils.get_env_metadata_from_dataset(dataset_path=args.dataset)
@@ -404,6 +500,7 @@ def extract_multiple_trajectories_with_error(
                 actions=actions,
                 done_mode=args.done_mode,
                 add_datagen_info=args.add_datagen_info,
+                process_num=process_num,
             )
 
             # maybe copy reward or done signal from source file
@@ -492,7 +589,7 @@ def dataset_states_to_obs_multiprocessing(args):
     f.close()
 
     env_meta = DatasetUtils.get_env_metadata_from_dataset(dataset_path=args.dataset)
-    num_processes = args.num_procs
+    num_processes = 1 if args.debug else args.num_procs
 
     index = multiprocessing.Value("i", 0)
     lock = multiprocessing.Lock()
@@ -662,6 +759,8 @@ if __name__ == "__main__":
     parser.add_argument("--generative_textures", action="store_true")
 
     parser.add_argument("--randomize_cameras", action="store_true")
+
+    parser.add_argument("--debug", action="store_true", help="run with single process for debugging")
 
     args = parser.parse_args()
     dataset_states_to_obs_multiprocessing(args)
