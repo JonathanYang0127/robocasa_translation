@@ -205,11 +205,11 @@ def collect_human_trajectory(
         # exit()
 
         # Print robot qpos for each robot
-        # for i, robot in enumerate(env.robots):
-        #     print(f"Robot {i} qpos:", robot._joint_positions)
+        for i, robot in enumerate(env.robots):
+            print(f"Robot {i} qpos:", robot._joint_positions)
 
-        print(len(env_action))
-        print("env_action", env_action)
+        # print(len(env_action))
+        # print("env_action", env_action)
 
     if nonzero_ac_seen and hasattr(env, "ep_directory"):
         ep_directory = env.ep_directory
@@ -339,8 +339,7 @@ def gather_demonstrations_as_hdf5(directory, out_dir, env_info, excluded_episode
     return hdf5_path
 
 
-if __name__ == "__main__":
-    # Arguments
+def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--directory",
@@ -419,7 +418,17 @@ if __name__ == "__main__":
         "--style", type=int, nargs="+", default=[0, 1, 2, 3, 4, 5, 6, 7, 8, 11]
     )
     parser.add_argument("--generative_textures", action="store_true")
-    args = parser.parse_args()
+    parser.add_argument(
+        "--repeat_env",
+        action="store_true",
+        help="Flag to indicate if the environment should be repeated"
+    )
+    return parser.parse_args()
+
+
+if __name__ == "__main__":
+    # Arguments
+    args = parse_args()
 
     # Get controller config
     # controller_config = load_controller_config(default_controller=args.controller)
@@ -569,27 +578,29 @@ if __name__ == "__main__":
             if started:
                 convert_to_robomimic_format(hdf5_path)
 
-        # # Properly clean up the old environment
-        # if hasattr(env, 'close'):
-        #     env.close()
-        # del env
 
-        # # Create new environment
-        # env = robosuite.make(
-        #     **config,
-        #     has_renderer=True,
-        #     has_offscreen_renderer=False,
-        #     render_camera=args.camera,
-        #     ignore_done=True,
-        #     use_camera_obs=False,
-        #     control_freq=20,
-        #     renderer=args.renderer,
-        #     rng=np.random.default_rng(SEEDS[SEED_IDX]),
-        # )
+        if args.repeat_env:
+            # Properly clean up the old environment
+            if hasattr(env, 'close'):
+                env.close()
+            del env
 
-        # # Wrap this with visualization wrapper
-        # env = VisualizationWrapper(env)
+            # Create new environment
+            env = robosuite.make(
+                **config,
+                has_renderer=True,
+                has_offscreen_renderer=False,
+                render_camera=args.camera,
+                ignore_done=True,
+                use_camera_obs=False,
+                control_freq=20,
+                renderer=args.renderer,
+                rng=np.random.default_rng(SEEDS[SEED_IDX]),
+            )
 
-        # Add the data collection wrapper if not in debug mode
-        # if not args.debug:
-        #     env = DataCollectionWrapper(env, tmp_directory)
+            # Wrap this with visualization wrapper
+            env = VisualizationWrapper(env)
+
+            # Add the data collection wrapper if not in debug mode
+            if not args.debug:
+                env = DataCollectionWrapper(env, tmp_directory)

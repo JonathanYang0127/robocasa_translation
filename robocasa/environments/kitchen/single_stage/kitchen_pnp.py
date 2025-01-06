@@ -17,6 +17,32 @@ class PnP(Kitchen):
 
         super().__init__(*args, **kwargs)
 
+    def _get_placement_region_kwargs(self, fixture, ref=None):
+        """
+        Helper method to get placement region kwargs based on robot type.
+        For UR5eOmron, restricts placements to the left side of fixtures.
+        """
+        robot_class_name = self.robots[0].robot_model.__class__.__name__
+        
+        # Base kwargs
+        kwargs = {}
+        if ref is not None:
+            kwargs["ref"] = ref
+        
+        # For UR5eOmron, restrict to left side only
+        if False and robot_class_name == "UR5eOmron":
+            # Get fixture position relative to robot base
+            breakpoint()
+            robot_pos = self.robots[0].robot_model.base_pos
+            fixture_pos = fixture.pos
+            rel_x = fixture_pos[0] - robot_pos[0]
+            
+            # If fixture is on right side of robot, force left side placement
+            if rel_x > 0:
+                kwargs["loc"] = "left"
+        
+        return kwargs
+
     def _get_obj_cfgs(self):
         raise NotImplementedError
 
@@ -85,8 +111,9 @@ class PnPCounterToCab(PnP):
                 graspable=True,
                 placement=dict(
                     fixture=self.counter,
-                    sample_region_kwargs=dict(
-                        ref=self.cab,
+                    sample_region_kwargs=self._get_placement_region_kwargs(
+                        self.counter, 
+                        ref=self.cab
                     ),
                     size=(0.60, 0.30),
                     pos=(0.0, -1.0),
@@ -102,8 +129,9 @@ class PnPCounterToCab(PnP):
                 obj_groups="all",
                 placement=dict(
                     fixture=self.counter,
-                    sample_region_kwargs=dict(
-                        ref=self.cab,
+                    sample_region_kwargs=self._get_placement_region_kwargs(
+                        self.counter,
+                        ref=self.cab
                     ),
                     size=(1.0, 0.30),
                     pos=(0.0, 1.0),
@@ -218,8 +246,9 @@ class PnPCabToCounter(PnP):
                 obj_groups="all",
                 placement=dict(
                     fixture=self.counter,
-                    sample_region_kwargs=dict(
-                        ref=self.cab,
+                    sample_region_kwargs=self._get_placement_region_kwargs(
+                        self.counter,
+                        ref=self.cab
                     ),
                     size=(1.0, 0.30),
                     pos=(0.0, 1.0),
@@ -311,9 +340,9 @@ class PnPCounterToSink(PnP):
                 washable=True,
                 placement=dict(
                     fixture=self.counter,
-                    sample_region_kwargs=dict(
-                        ref=self.sink,
-                        loc="left_right",
+                    sample_region_kwargs=self._get_placement_region_kwargs(
+                        self.counter,
+                        ref=self.sink
                     ),
                     size=(0.30, 0.40),
                     pos=("ref", -1.0),
@@ -328,9 +357,9 @@ class PnPCounterToSink(PnP):
                 obj_groups="all",
                 placement=dict(
                     fixture=self.counter,
-                    sample_region_kwargs=dict(
-                        ref=self.sink,
-                        loc="left_right",
+                    sample_region_kwargs=self._get_placement_region_kwargs(
+                        self.counter,
+                        ref=self.sink
                     ),
                     size=(0.30, 0.30),
                     pos=("ref", -1.0),
@@ -431,14 +460,14 @@ class PnPSinkToCounter(PnP):
         cfgs.append(
             dict(
                 name="container",
-                obj_groups="container",
+                obj_groups=("container"),
                 placement=dict(
                     fixture=self.counter,
-                    sample_region_kwargs=dict(
-                        ref=self.sink,
-                        loc="left_right",
+                    sample_region_kwargs=self._get_placement_region_kwargs(
+                        self.counter,
+                        ref=self.sink
                     ),
-                    size=(0.35, 0.40),
+                    size=(0.30, 0.30),
                     pos=("ref", -1.0),
                 ),
             )
@@ -451,9 +480,9 @@ class PnPSinkToCounter(PnP):
                 obj_groups="all",
                 placement=dict(
                     fixture=self.counter,
-                    sample_region_kwargs=dict(
-                        ref=self.sink,
-                        loc="left_right",
+                    sample_region_kwargs=self._get_placement_region_kwargs(
+                        self.counter,
+                        ref=self.sink
                     ),
                     size=(0.30, 0.30),
                     pos=("ref", -1.0),
@@ -547,8 +576,9 @@ class PnPCounterToMicrowave(PnP):
                 microwavable=True,
                 placement=dict(
                     fixture=self.counter,
-                    sample_region_kwargs=dict(
-                        ref=self.microwave,
+                    sample_region_kwargs=self._get_placement_region_kwargs(
+                        self.counter,
+                        ref=self.microwave
                     ),
                     size=(0.30, 0.30),
                     pos=("ref", -1.0),
@@ -575,8 +605,9 @@ class PnPCounterToMicrowave(PnP):
                 obj_groups="all",
                 placement=dict(
                     fixture=self.distr_counter,
-                    sample_region_kwargs=dict(
-                        ref=self.microwave,
+                    sample_region_kwargs=self._get_placement_region_kwargs(
+                        self.distr_counter,
+                        ref=self.microwave
                     ),
                     size=(0.30, 0.30),
                     pos=("ref", 1.0),
@@ -685,8 +716,9 @@ class PnPMicrowaveToCounter(PnP):
                 obj_groups=("container"),
                 placement=dict(
                     fixture=self.counter,
-                    sample_region_kwargs=dict(
-                        ref=self.microwave,
+                    sample_region_kwargs=self._get_placement_region_kwargs(
+                        self.counter,
+                        ref=self.microwave
                     ),
                     size=(0.30, 0.30),
                     pos=("ref", -1.0),
@@ -701,8 +733,9 @@ class PnPMicrowaveToCounter(PnP):
                 obj_groups="all",
                 placement=dict(
                     fixture=self.distr_counter,
-                    sample_region_kwargs=dict(
-                        ref=self.microwave,
+                    sample_region_kwargs=self._get_placement_region_kwargs(
+                        self.distr_counter,
+                        ref=self.microwave
                     ),
                     size=(0.30, 0.30),
                     pos=("ref", 1.0),
@@ -790,8 +823,9 @@ class PnPCounterToStove(PnP):
                 cookable=True,
                 placement=dict(
                     fixture=self.counter,
-                    sample_region_kwargs=dict(
-                        ref=self.stove,
+                    sample_region_kwargs=self._get_placement_region_kwargs(
+                        self.counter,
+                        ref=self.stove
                     ),
                     size=(0.30, 0.30),
                     pos=("ref", -1.0),
@@ -883,8 +917,9 @@ class PnPStoveToCounter(PnP):
                 obj_groups=("plate", "bowl"),
                 placement=dict(
                     fixture=self.counter,
-                    sample_region_kwargs=dict(
-                        ref=self.stove,
+                    sample_region_kwargs=self._get_placement_region_kwargs(
+                        self.counter,
+                        ref=self.stove
                     ),
                     size=(0.30, 0.30),
                     pos=("ref", -1.0),

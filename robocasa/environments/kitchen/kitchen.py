@@ -68,6 +68,7 @@ _ROBOT_POS_OFFSETS: dict[str, list[float]] = {
     "G1": [0, -0.33, 0],
     "G1FixedLowerBody": [0, -0.33, 0],
     "GoogleRobot": [0, 0, 0],
+    "UR5eOmron": [0.02, -0.0, 0.05],
 }
 
 
@@ -391,6 +392,14 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
                     -1.39645665,
                     -2.19034441,
                 )
+                # robot.init_qpos = (
+                #     0.02591631,
+                #     -2.02190444,
+                #     1.59271895,
+                #     -1.40422413,
+                #     -1.52597595,
+                #     -1.57619347,
+                # )
                 robot.init_torso_qpos = np.array([0.0])
             elif isinstance(robot.robot_model, Kinova3Omron):
                 robot.init_qpos = (

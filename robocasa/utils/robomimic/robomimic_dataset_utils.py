@@ -169,34 +169,65 @@ def filter_dataset_size(
 
 
 def move_demo_to_new_key(f, old_demo_key, new_demo_key, delete_old_demo=True):
+    """
+    Move a demo from one key to another in an HDF5 file.
+    Converts any tuple keys to string keys to comply with HDF5 requirements.
+    """
     print(f"Moving {old_demo_key} -> {new_demo_key}")
+    
+    # Get source episode data
+    src_ep = f["data/{}".format(old_demo_key)]
+    
+    # Create target episode group
+    targ_ep = f["data"].create_group(new_demo_key)
+    
+    def copy_group(src, dest, path=""):
+        for k in src.keys():
+            # Convert key to string if it's not already
+            if isinstance(k, (str, bytes)):
+                k_str = k
+            elif isinstance(k, tuple):
+                # Example conversion: ('a', 'b') -> 'a_b'
+                k_str = "_".join(map(str, k))
+                print(f"Converting tuple key {k} to string {k_str}")
+            else:
+                # Fallback for other types
+                k_str = str(k)
+                print(f"Converting non-string/non-tuple key {k} to string {k_str}")
 
-    src_ep = f["data"][old_demo_key]
-
-    if new_demo_key not in f["data"]:
-        f["data"].create_group(new_demo_key)
-
-    targ_ep = f["data"][new_demo_key]
-
-    targ_ep.attrs.update(src_ep.attrs)
-
-    # write the datasets
-    for k in src_ep:
-        if isinstance(src_ep[k], h5py.Dataset):
-            targ_ep.create_dataset(k, data=np.array(src_ep[k]))
+            item = src[k]
+            print(f"Processing key: {k} (converted to {k_str}) Type: {type(item)}")
+            
+            if isinstance(item, h5py.Group):
+                # Create a new group in the destination
+                new_group = dest.create_group(k_str)
+                # Recursively copy the group's contents
+                copy_group(item, new_group, path=f"{path}/{k_str}")
+            else:
+                # Handle datasets
+                data = item[()]
+                if isinstance(data, np.ndarray) and data.dtype.kind == 'U':
+                    # Convert Unicode strings to ASCII to avoid HDF5 issues
+                    data = np.char.encode(data, encoding='ascii')
+                dest.create_dataset(k_str, data=data)
+    
+    # Start copying from the source episode to the target episode
+    copy_group(src_ep, targ_ep)
+    
+    # Copy attributes, ensuring keys are strings
+    for k, v in src_ep.attrs.items():
+        if not isinstance(k, (str, bytes)):
+            k_str = "_".join(map(str, k)) if isinstance(k, tuple) else str(k)
+            print(f"Converting attribute key {k} to string {k_str}")
         else:
-            for m in src_ep[k]:
-                targ_ep.create_dataset(
-                    "{}/{}".format(k, m),
-                    data=np.array(src_ep["{}/{}".format(k, m)]),
-                )
-
-    # write the metadata present in attributes as well
-    for k in src_ep.attrs:
-        targ_ep.attrs[k] = src_ep.attrs[k]
-
-    if delete_old_demo is True:
-        del f["data"][old_demo_key]
+            k_str = k
+        
+        if isinstance(v, str):
+            v = v.encode('ascii')  # Convert attribute values to ASCII if they are strings
+        targ_ep.attrs[k_str] = v
+    
+    if delete_old_demo:
+        del f["data/{}".format(old_demo_key)]
 
 
 def make_demo_ids_contiguous(dataset):
