@@ -83,7 +83,7 @@ def extract_trajectory(
     # TODO: add aux info here
     world_to_camera_transform = get_camera_transform_matrix(
         env.env.sim,
-        "robot0_agentview_center",
+        "robot0_agentview_wide",
         env.env.camera_heights[0],
         env.env.camera_widths[0],
     )
@@ -107,7 +107,7 @@ def extract_trajectory(
 
         # Reorganize observations to match LIBERO format
         traj["obs"].setdefault("agentview_rgb", []).append(
-            obs['robot0_agentview_center_image']
+            obs['robot0_agentview_wide_image']
         )
         traj["obs"].setdefault("eye_in_hand_rgb", []).append(
             obs['robot0_eye_in_hand_image']
@@ -657,7 +657,7 @@ if __name__ == "__main__":
         type=str,
         nargs="+",
         default=[
-            "robot0_agentview_center",
+            "robot0_agentview_wide",
             "robot0_eye_in_hand",
         ],
         help="(optional) camera name(s) to use for image observations. Leave out to not use image observations.",
