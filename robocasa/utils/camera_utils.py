@@ -44,6 +44,7 @@ DEFAULT_LAYOUT_CAM = {
     "elevation": -18.02177994296577,
 }
 
+
 CAM_CONFIGS = dict(
     robot0_agentview_center=dict(
         pos=[-0.6, 0.0, 1.15],
@@ -53,6 +54,17 @@ CAM_CONFIGS = dict(
             -0.3199238181114197,
             -0.6175596117973328,
         ],
+        parent_body="mobilebase0_support",
+    ),
+    robot0_agentview_wide=dict(
+        pos=[-0.6, 0, 1.15],
+        quat=[
+            0.636945903301239,
+            0.3325185477733612,
+            -0.3199238181114197,
+            -0.6175596117973328,
+        ],
+        camera_attribs=dict(fovy="60"),
         parent_body="mobilebase0_support",
     ),
     robot0_agentview_left=dict(
