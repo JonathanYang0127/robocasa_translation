@@ -67,6 +67,28 @@ CAM_CONFIGS = dict(
         camera_attribs=dict(fovy="60"),
         parent_body="mobilebase0_support",
     ),
+    robot0_agentview_wide_75=dict(
+        pos=[-0.6, 0, 1.15],
+        quat=[
+            0.636945903301239,
+            0.3325185477733612,
+            -0.3199238181114197,
+            -0.6175596117973328,
+        ],
+        camera_attribs=dict(fovy="75"),
+        parent_body="mobilebase0_support",
+    ),
+    robot0_agentview_wide_90=dict(
+        pos=[-0.6, 0, 1.15],
+        quat=[
+            0.636945903301239,
+            0.3325185477733612,
+            -0.3199238181114197,
+            -0.6175596117973328,
+        ],
+        camera_attribs=dict(fovy="90"),
+        parent_body="mobilebase0_support",
+    ),
     robot0_agentview_left=dict(
         pos=[-0.5, 0.35, 1.05],
         quat=[0.55623853, 0.29935253, -0.37678665, -0.6775092],
