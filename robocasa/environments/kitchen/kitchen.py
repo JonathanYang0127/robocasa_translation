@@ -69,6 +69,7 @@ _ROBOT_POS_OFFSETS: dict[str, list[float]] = {
     "G1FixedLowerBody": [0, -0.33, 0],
     "GoogleRobot": [0, 0, 0],
     "UR5eOmron": [0.02, -0.0, 0.05],
+    "PandaOmron": [0.4, 0.0, 0.],
 }
 
 
@@ -280,6 +281,7 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
         # intialize cameras
         self._cam_configs = deepcopy(CamUtils.CAM_CONFIGS)
 
+
         if isinstance(robots, str):
             robots = [robots]
 
@@ -392,6 +394,7 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
                     -1.39645665,
                     -2.19034441,
                 )
+
                 # robot.init_qpos = (
                 #     0.02591631,
                 #     -2.02190444,
