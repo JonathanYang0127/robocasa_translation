@@ -29,18 +29,6 @@ class PnP(Kitchen):
         if ref is not None:
             kwargs["ref"] = ref
         
-        # For UR5eOmron, restrict to left side only
-        if False and robot_class_name == "UR5eOmron":
-            # Get fixture position relative to robot base
-            breakpoint()
-            robot_pos = self.robots[0].robot_model.base_pos
-            fixture_pos = fixture.pos
-            rel_x = fixture_pos[0] - robot_pos[0]
-            
-            # If fixture is on right side of robot, force left side placement
-            if rel_x > 0:
-                kwargs["loc"] = "left"
-        
         return kwargs
 
     def _get_obj_cfgs(self):
@@ -103,6 +91,7 @@ class PnPCounterToCab(PnP):
 
         """
         cfgs = []
+
         cfgs.append(
             dict(
                 name="obj",
@@ -121,6 +110,7 @@ class PnPCounterToCab(PnP):
                 ),
             )
         )
+        
 
         # distractors
         cfgs.append(
@@ -294,7 +284,17 @@ class PnPCounterToSink(PnP):
 
     def __init__(self, obj_groups="all", *args, **kwargs):
 
-        super().__init__(obj_groups=obj_groups, *args, **kwargs)
+        super().__init__(
+            obj_groups=obj_groups, 
+            robot_pos_offsets={
+                "UR5eOmron": [0.6, -0.1, 0.0], # final
+                "PandaOmron": [0.4, 0.0, 0.0], # final
+                "Kinova3Omron": [0.4, 0.0, 0.0], 
+                "SawyerOmron": [0.4, 0.0, 0.0], # final
+            }, 
+            *args, 
+            **kwargs
+        )
 
     def _setup_kitchen_references(self):
         """
@@ -331,6 +331,7 @@ class PnPCounterToSink(PnP):
         and the sink.
         """
         cfgs = []
+
         cfgs.append(
             dict(
                 name="obj",

@@ -45,6 +45,26 @@ def is_empty_input_spacemouse(action_dict):
     return False
 
 
+
+def disable_robot_collisions(sim):
+    """
+    Disable collisions for the entire robot arm (including hand/wrist) while preserving 
+    only gripper finger collisions. This allows the entire arm to pass through objects 
+    while still enabling grasping with the fingers.
+    """
+    for geom_id, geom_name in enumerate(sim.model.geom_names):
+        if "robot0" in geom_name:
+            # Only keep collision for gripper fingers
+            if "finger" in geom_name:
+                continue
+            # Disable collision for everything else (arm links, wrist, palm etc)
+            sim.model.geom_contype[geom_id] = 0
+            sim.model.geom_conaffinity[geom_id] = 0
+    
+    # Force MuJoCo to update
+    sim.forward()
+
+
 def collect_human_trajectory(
     env,
     device,
@@ -55,6 +75,8 @@ def collect_human_trajectory(
     max_fr=None,
     print_info=True,
     prev_traj_discarded=False,
+    disable_tilt=False,
+    disable_robot_collisions=False,
 ):
     """
     Use the device (keyboard or SpaceNav 3D mouse) to collect a demonstration.
@@ -68,6 +90,9 @@ def collect_human_trajectory(
         env_configuration (str): specified environment configuration
     """
     env.reset()
+
+    if disable_robot_collisions:
+        disable_robot_collisions(env.sim)
 
     ep_meta = env.get_ep_meta()
     # print(json.dumps(ep_meta, indent=4))
@@ -141,6 +166,9 @@ def collect_human_trajectory(
 
         # Get the newest action
         input_ac_dict = device.input2action(mirror_actions=mirror_actions)
+        
+        if disable_tilt and input_ac_dict is not None:
+            input_ac_dict["right_delta"][3:5] = 0
 
         # If action is none, then this a reset so we should break
         if input_ac_dict is None:
@@ -204,12 +232,12 @@ def collect_human_trajectory(
         #     f.write(env.model.get_xml())
         # exit()
 
-        # Print robot qpos for each robot
-        for i, robot in enumerate(env.robots):
-            print(f"Robot {i} qpos:", robot._joint_positions)
+        # # Print robot qpos for each robot
+        # for i, robot in enumerate(env.robots):
+        #     print(f"Robot {i} qpos:", robot._joint_positions)
 
         # print(len(env_action))
-        # print("env_action", env_action)
+        print("env_action", env_action)
 
     if nonzero_ac_seen and hasattr(env, "ep_directory"):
         ep_directory = env.ep_directory
@@ -423,6 +451,11 @@ def parse_args():
         action="store_true",
         help="Flag to indicate if the environment should be repeated"
     )
+    parser.add_argument(
+        "--disable_tilt",
+        action="store_true",
+        help="Flag to disable tilt controls when collecting demonstrations"
+    )
     return parser.parse_args()
 
 
@@ -490,6 +523,7 @@ if __name__ == "__main__":
         config["obj_instance_split"] = "A"
         # config["obj_instance_split"] = None
         # config["obj_registries"] = ("aigen",)
+
 
     # Create environment
     env = robosuite.make(
@@ -560,6 +594,7 @@ if __name__ == "__main__":
             render=(args.renderer != "mjviewer"),
             max_fr=args.max_fr,
             prev_traj_discarded=prev_traj_discarded,
+            disable_tilt=args.disable_tilt,
         )
 
         if not discard_traj:

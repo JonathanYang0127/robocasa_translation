@@ -60,7 +60,7 @@ class KitchenEnvMeta(EnvMeta):
         return cls
 
 
-_ROBOT_POS_OFFSETS: dict[str, list[float]] = {
+_DEFAULT_ROBOT_POS_OFFSETS: dict[str, list[float]] = {
     "GR1FloatingBody": [0, 0, 0.97],
     "GR1": [0, 0, 0.97],
     "GR1FixedLowerBody": [0, 0, 0.97],
@@ -68,13 +68,7 @@ _ROBOT_POS_OFFSETS: dict[str, list[float]] = {
     "G1": [0, -0.33, 0],
     "G1FixedLowerBody": [0, -0.33, 0],
     "GoogleRobot": [0, 0, 0],
-    # "UR5eOmron": [0.02, -0.0, 0.05],
-    "PandaOmron": [0.4, 0.0, 0.0],
-    "Kinova3Omron": [0.4, 0.0, 0.0],
-    "SawyerOmron": [0.4, 0.0, 0.0],
-    "UR5eOmron": [0.4, 0.0, 0.0],
 }
-
 
 class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
     """
@@ -203,6 +197,8 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
 
         randomize_cameras (bool): if True, will add gaussian noise to the position and rotation of the
             wrist and agentview cameras
+
+        robot_pos_offsets (dict): custom robot position offsets
     """
 
     EXCLUDE_LAYOUTS = []
@@ -249,8 +245,14 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
         translucent_robot=False,
         randomize_cameras=False,
         rng=None,
+        robot_pos_offsets=None,  # New parameter
     ):
         self.init_robot_base_pos = init_robot_base_pos
+
+        # Initialize robot position offsets with defaults, then update with any custom values
+        self._robot_pos_offsets = dict(_DEFAULT_ROBOT_POS_OFFSETS)
+        if robot_pos_offsets is not None:
+            self._robot_pos_offsets.update(robot_pos_offsets)
 
         # object placement initializer
         self.placement_initializer = placement_initializer
@@ -397,14 +399,6 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
                     -1.39645665,
                     -2.19034441,
                 )
-                # robot.init_qpos = (
-                #     0.02591631,
-                #     -2.02190444,
-                #     1.59271895,
-                #     -1.40422413,
-                #     -1.52597595,
-                #     -1.57619347,
-                # )
                 robot.init_torso_qpos = np.array([0.0])
             elif isinstance(robot.robot_model, Kinova3Omron):
                 robot.init_qpos = (
@@ -688,9 +682,7 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
 
         Args:
             ref_fixture (Fixture): reference fixture to place th robot near
-
             offset (list): offset to add to the base position
-
         """
         # step 1: find vase fixture closest to robot
         base_fixture = None
@@ -741,9 +733,9 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
         # apply robot-specific offset relative to the base fixture for x,y dims
         robot_model = self.robots[0].robot_model
         robot_class_name = robot_model.__class__.__name__
-        if robot_class_name in _ROBOT_POS_OFFSETS:
+        if robot_class_name in self._robot_pos_offsets:
             for dimension in range(0, 2):
-                base_to_edge[dimension] += _ROBOT_POS_OFFSETS[robot_class_name][
+                base_to_edge[dimension] += self._robot_pos_offsets[robot_class_name][
                     dimension
                 ]
 
@@ -753,8 +745,8 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
             0:2
         ]
         # apply robot-specific absolutely for z dim
-        if robot_class_name in _ROBOT_POS_OFFSETS:
-            robot_base_pos[2] = _ROBOT_POS_OFFSETS[robot_class_name][2]
+        if robot_class_name in self._robot_pos_offsets:
+            robot_base_pos[2] = self._robot_pos_offsets[robot_class_name][2]
         robot_base_ori = np.array([0, 0, base_fixture.rot + np.pi / 2])
 
         return robot_base_pos, robot_base_ori

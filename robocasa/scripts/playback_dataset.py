@@ -3,6 +3,7 @@ import json
 import os
 import random
 import time
+import xml.etree.ElementTree as ET
 
 import h5py
 import imageio
@@ -11,6 +12,8 @@ import robosuite
 from termcolor import colored
 
 import robocasa
+
+from robosuite.utils.camera_utils import CameraMover
 
 
 def playback_trajectory_with_env(
@@ -152,11 +155,11 @@ def playback_trajectory_with_obs(
     ), "error: must specify at least one image observation to use in @image_names"
     video_count = 0
 
-    traj_len = traj_grp["obs/{}".format(image_names[0] + "_image")].shape[0]
+    traj_len = traj_grp["obs/{}".format(image_names[0])].shape[0] #  + "_image"
     for i in range(traj_len):
         if video_count % video_skip == 0:
             # concatenate image obs together
-            im = [traj_grp["obs/{}".format(k + "_image")][i] for k in image_names]
+            im = [traj_grp["obs/{}".format(k )][i] for k in image_names] # + "_image"
             frame = np.concatenate(im, axis=1)
             video_writer.append_data(frame)
         video_count += 1
@@ -323,6 +326,8 @@ def playback_dataset(args):
         env_kwargs["renderer"] = "mjviewer"
         env_kwargs["has_offscreen_renderer"] = write_video
         env_kwargs["use_camera_obs"] = False
+        env_kwargs["camera_names"] = args.render_image_names
+        env_kwargs["camera_heights"] = 84
 
         if args.verbose:
             print(
