@@ -13,6 +13,7 @@ import queue
 import time
 import traceback
 import torch
+import wandb
 
 import robocasa.utils.robomimic.robomimic_tensor_utils as TensorUtils
 import robocasa.utils.robomimic.robomimic_env_utils as EnvUtils
@@ -181,6 +182,20 @@ def write_traj_to_file(
     start_time = time.time()
     num_processed = 0
 
+    # Initialize wandb
+    wandb.init(
+        project="dataset-processing",
+        name=f"process-{os.path.basename(args.dataset)}",
+        config={
+            "input_dataset": args.dataset,
+            "output_path": output_path,
+            "num_processes": processes,
+            "camera_names": args.camera_names,
+            "camera_height": args.camera_height,
+            "camera_width": args.camera_width,
+        }
+    )
+
     try:
         while (total_run.value < (processes)) or not mul_queue.empty():
             if not mul_queue.empty():
@@ -302,6 +317,28 @@ def write_traj_to_file(
                     ]  # number of transitions in this episode
 
                     total_samples.value += traj["actions"].shape[0]
+
+                    # Log metrics to wandb
+                    elapsed_time = time.time() - start_time
+                    wandb.log({
+                        "demos_processed": num_processed,
+                        "transitions_processed": total_samples.value,
+                        "processing_rate": num_processed / elapsed_time,
+                        "transitions_per_second": total_samples.value / elapsed_time,
+                        "percent_complete": (num_processed / len(f["data"])) * 100,
+                    })
+
+                    print(
+                        "ep {}: wrote {} transitions to group {} at process {} with {} finished. Datagen rate: {:.2f} sec/demo".format(
+                            num_processed,
+                            ep_data_grp.attrs["num_samples"],
+                            ep,
+                            process_num,
+                            total_run.value,
+                            (time.time() - start_time) / num_processed,
+                        )
+                    )
+
                 except Exception as e:
                     print("++" * 50)
                     print(
@@ -309,16 +346,7 @@ def write_traj_to_file(
                     )
                     print("++" * 50)
                     raise Exception("Write out to file has failed")
-                print(
-                    "ep {}: wrote {} transitions to group {} at process {} with {} finished. Datagen rate: {:.2f} sec/demo".format(
-                        num_processed,
-                        ep_data_grp.attrs["num_samples"],
-                        ep,
-                        process_num,
-                        total_run.value,
-                        (time.time() - start_time) / num_processed,
-                    )
-                )
+
     except KeyboardInterrupt:
         print("Control C pressed. Closing File and ending \n\n\n\n\n\n\n")
 
@@ -390,9 +418,16 @@ def write_traj_to_file(
     print("Writing has finished")
 
     end_time = time.time()
-
-    # Calculate the elapsed time
     elapsed_time = end_time - start_time
+
+    # Final wandb logging
+    wandb.log({
+        "total_demos_processed": num_processed,
+        "total_transitions": total_samples.value,
+        "total_time": elapsed_time,
+        "final_processing_rate": num_processed / elapsed_time,
+    })
+    wandb.finish()
 
     print(f"Time elapsed: {elapsed_time:.2f} seconds")
     return
@@ -762,5 +797,34 @@ if __name__ == "__main__":
 
     parser.add_argument("--debug", action="store_true", help="run with single process for debugging")
 
+    # Add wandb-related arguments
+    parser.add_argument(
+        "--wandb_project",
+        type=str,
+        default="dataset-processing",
+        help="wandb project name",
+    )
+    parser.add_argument(
+        "--wandb_entity",
+        type=str,
+        default=None,
+        help="wandb entity (username or team name)",
+    )
+    parser.add_argument(
+        "--no_wandb",
+        action="store_true",
+        help="disable wandb logging",
+    )
+
     args = parser.parse_args()
+
+    
+    # Initialize wandb if enabled
+    if not args.no_wandb:
+        wandb.init(
+            project=args.wandb_project,
+            entity=args.wandb_entity,
+            config=vars(args)
+        )
+    
     dataset_states_to_obs_multiprocessing(args)
