@@ -199,6 +199,8 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
             wrist and agentview cameras
 
         robot_pos_offsets (dict): custom robot position offsets
+
+        robot_init_qpos (dict): custom robot initial qpos
     """
 
     EXCLUDE_LAYOUTS = []
@@ -246,6 +248,7 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
         randomize_cameras=False,
         rng=None,
         robot_pos_offsets=None,  # New parameter
+        robot_init_qpos=None,
     ):
         self.init_robot_base_pos = init_robot_base_pos
 
@@ -300,6 +303,8 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
         self.use_object_obs = use_object_obs
         self.reward_scale = reward_scale
         self.reward_shaping = reward_shaping
+
+        self.robot_init_qpos = robot_init_qpos
 
         if controller_configs is not None:
             # detect if using stale controller configs (before robosuite v1.5.1) and update to new convention
@@ -379,7 +384,9 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
         super()._load_model()
 
         for robot in self.robots:
-            if isinstance(robot.robot_model, PandaOmron):
+            if self.robot_init_qpos is not None and robot.robot_model.__class__.__name__ in self.robot_init_qpos:
+                robot.init_qpos = self.robot_init_qpos[robot.robot_model.__class__.__name__]
+            elif isinstance(robot.robot_model, PandaOmron):
                 robot.init_qpos = (
                     -0.01612974,
                     -1.03446714,

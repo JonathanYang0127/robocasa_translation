@@ -50,7 +50,15 @@ class PnPCounterToCab(PnP):
     ):
 
         self.cab_id = cab_id
-        super().__init__(obj_groups=obj_groups, *args, **kwargs)
+        super().__init__(obj_groups=obj_groups, 
+                         robot_pos_offsets={
+                            "UR5eOmron": [0.3, -0.1, 0.0], # final
+                        },
+                        robot_init_qpos={
+                            "UR5eOmron": [ 0.0398006, -1.94908376, 1.62536002, -1.23812987, -1.5892743, -1.63821445], # final
+                        },
+                         *args, 
+                         **kwargs)
 
     def _setup_kitchen_references(self):
         """
@@ -171,7 +179,11 @@ class PnPCabToCounter(PnP):
         self, cab_id=FixtureType.CABINET_TOP, obj_groups="all", *args, **kwargs
     ):
         self.cab_id = cab_id
-        super().__init__(obj_groups=obj_groups, *args, **kwargs)
+        super().__init__(
+            obj_groups=obj_groups, 
+            *args, 
+            **kwargs
+        )
 
     def _setup_kitchen_references(self):
         """
@@ -647,7 +659,10 @@ class PnPMicrowaveToCounter(PnP):
 
     def __init__(self, obj_groups="food", *args, **kwargs):
 
-        super().__init__(obj_groups=obj_groups, *args, **kwargs)
+        super().__init__(obj_groups=obj_groups,
+                         
+                          *args,
+                          **kwargs)
 
     def _setup_kitchen_references(self):
         """
