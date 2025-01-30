@@ -51,7 +51,7 @@ class PnPCounterToCab(PnP):
 
         self.cab_id = cab_id
         super().__init__(obj_groups=obj_groups, 
-                         robot_pos_offsets={
+                        robot_pos_offsets={
                             "UR5eOmron": [0.3, -0.1, 0.0], # final
                         },
                         robot_init_qpos={
@@ -418,7 +418,14 @@ class PnPSinkToCounter(PnP):
 
     def __init__(self, obj_groups="food", *args, **kwargs):
 
-        super().__init__(obj_groups=obj_groups, *args, **kwargs)
+        super().__init__(
+            obj_groups=obj_groups, 
+            robot_pos_offsets={
+                # "UR5eOmron": [0.6, -0.1, 0.0], # final
+                # "PandaOmron": [0.4, 0.0, 0.0], # final
+                "Kinova3Omron": [-0.2, 0.0, 0.0], 
+                # "SawyerOmron": [0.4, 0.0, 0.0], # final
+            }, *args, **kwargs)
 
     def _setup_kitchen_references(self):
         """
@@ -531,7 +538,14 @@ class PnPCounterToMicrowave(PnP):
     """
 
     def __init__(self, obj_groups="food", *args, **kwargs):
-        super().__init__(obj_groups=obj_groups, *args, **kwargs)
+        super().__init__(
+            obj_groups=obj_groups, 
+            robot_pos_offsets={
+                "UR5eOmron": [0.0, -0.1, 0.05], 
+                "PandaOmron": [-0.1, 0.0, 0.0], 
+                "Kinova3Omron": [-0.1, 0.0, 0.0], 
+                # "SawyerOmron": [-0.1, 0.0, 0.0], 
+            }, *args, **kwargs)
 
     def _setup_kitchen_references(self):
         """
@@ -660,9 +674,14 @@ class PnPMicrowaveToCounter(PnP):
     def __init__(self, obj_groups="food", *args, **kwargs):
 
         super().__init__(obj_groups=obj_groups,
-                         
-                          *args,
-                          **kwargs)
+                         robot_pos_offsets={
+                            # "UR5eOmron": [0.6, -0.1, 0.0], # final
+                            # "PandaOmron": [0.4, 0.0, 0.0], # final
+                            "Kinova3Omron": [0.0, 0.0, 0.075], 
+                            # "SawyerOmron": [0.4, 0.0, 0.0], # final
+                        }, 
+                         *args,
+                         **kwargs)
 
     def _setup_kitchen_references(self):
         """
@@ -872,7 +891,13 @@ class PnPStoveToCounter(PnP):
     """
 
     def __init__(self, obj_groups="food", *args, **kwargs):
-        super().__init__(obj_groups=obj_groups, *args, **kwargs)
+        super().__init__(
+            obj_groups=obj_groups, 
+            robot_pos_offsets={
+                "UR5eOmron": [0.0, -0.1, 0.0], 
+            },
+            *args,
+            **kwargs)
 
     def _setup_kitchen_references(self):
         """
