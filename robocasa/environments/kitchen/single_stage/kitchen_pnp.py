@@ -421,11 +421,14 @@ class PnPSinkToCounter(PnP):
         super().__init__(
             obj_groups=obj_groups, 
             robot_pos_offsets={
-                # "UR5eOmron": [0.6, -0.1, 0.0], # final
-                # "PandaOmron": [0.4, 0.0, 0.0], # final
-                "Kinova3Omron": [-0.2, 0.0, 0.0], 
-                # "SawyerOmron": [0.4, 0.0, 0.0], # final
-            }, *args, **kwargs)
+                "UR5eOmron": [0.6, -0.1, 0.0], # final
+                "PandaOmron": [0.4, 0.0, 0.0], # final
+                "Kinova3Omron": [0.4, 0.0, 0.0], 
+                "SawyerOmron": [0.4, 0.0, 0.0], # final
+            }, 
+            *args, 
+            **kwargs
+        )
 
     def _setup_kitchen_references(self):
         """
